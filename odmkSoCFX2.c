@@ -57,10 +57,6 @@ ARM software for driving peripherals, etc. used for Zedboard
 #define SWS_CH_MASK		XGPIO_IR_CH2_MASK
 #define TIMER_INT		XGPIO_IR_CH1_MASK
 #define ROTARY_INT		XGPIO_IR_CH1_MASK
-//#define ROTARY1_INT		XGPIO_IR_CH1_MASK
-//#define ROTARY2_INT		XGPIO_IR_CH1_MASK
-//#define ROTARY3_INT		XGPIO_IR_CH1_MASK
-//#define ROTARY4_INT		XGPIO_IR_CH1_MASK
 
 //#define LED 0xC3									/* Initial LED value - XX0000XX */
 #define LED 0x01									/* Initial LED value - XX0000XX */
@@ -247,9 +243,6 @@ static u8 fader1MuxSel = 0;
 static u8 fader2MuxSel = 0;
 static u8 fader3MuxSel = 0;
 static u8 fader4MuxSel = 0;
-//static float fader1Val = 0;
-//static float fader2Val = 0;
-//static float fader3Val = 0;
 
 static int sysmode = 0;							// 0=>OLED info ; 1=>OLED imgRotate ; 2=>?
 
@@ -270,11 +263,6 @@ static float fader1Lvl = 0;
 static float fader2Lvl = 0;
 static float fader3Lvl = 0;
 static float fader4Lvl = 0;
-
-//static float fader3Lvl_CH0 = 0;
-//static float fader3Lvl_CH1 = 0;
-//static float fader3Lvl_CH2 = 0;
-//static float fader3Lvl_CH3 = 0;
 
 
 /*------------------------------------------------------------------------------------------------*/
@@ -366,58 +354,6 @@ union auMux_u {
 static union auMux_u auMuxUnion;
 
 
-// Audio Mux Control GPIO  [0:21]
-// = (audioSrcMuxSel<<14) + (16383&audioMuxSel)		// 14bit mask
-
-//// Audio Routing Mux Control [0:21]
-//struct auMux_type {
-//
-//	// bank 0 : sw8 == 0			// IPI block name										  	bit-position
-//	unsigned  CH1_outMux: 3;		// Audio Source Mux CH1 (CH1_OutMux6)			- sw1&2&3 	- 0,1,2
-//	unsigned  CH2_outMux: 2;		// Audio Output Mux CH2 (CH2_OutMux4)			- sw4&5   	- 3,4
-//	unsigned  wsInMux: 2;			// Waveshaper Input Mux (filterInMux4Stereo)	- sw6&7   	- 5,6
-//
-//	// bank 1 : sw8 == 1
-//	unsigned  ddlInMux: 2;			// Delay Input Mux (ddlInMux4Stereo)			- sw1&2   	- 7,8
-//	unsigned  ddlFBSrcSel: 1;		// DDL FB Input Sel (ddlFBMux2Stereo)			- sw3     	- 9
-//	unsigned  ddlExtFBSel: 1;		// DDL FB Int/Ext Sel (selectExtFB)		        - sw4     	- 10
-//	unsigned  fltInMux: 2;			// Filter Input Mux (ddlFBMux2Stereo)			- sw5&6   	- 11,12
-//	unsigned  ssbInSel: 1;		    // SSB Input Sel (ssbMux2Stereo) 				- sw7	  	- 13
-//
-//};
-//
-//union auMux_u {
-//	u32 audioMuxSel;
-//	struct auMux_type audioSelect;
-//};
-//
-//static union auMux_u auMuxUnion;
-//
-//
-//
-//// audioSrcMux: {right BTN} = input audio MUX sel
-//// 0 = sin, 1 = saw, 2 = sqr, 3 = pwm, 4 = external
-//
-//// Audio Source Mux Control [0:6]
-//struct auSrc_type {
-//
-//	unsigned flt6Mux: 3;				// Filter Output Mux6 (xlslice_filterMux6Sel)   - null    	- 14,15,16
-//	unsigned flt4Mux: 2;				// Filter Output Mux4 (xlslice_filterMux4Sel)	- null    	- 17, 18
-//
-//	unsigned audioSrcMux: 3; 			// Audio Source Mux (audioSrcMux5Stereo)		- right BTN - 19,20,21
-//};
-//
-//union auSrcMux_u {
-//	u32 audioSrcMuxSel;
-//	struct auSrc_type audioSrcSelect;
-//};
-//
-//static union auSrcMux_u auSrcMuxUnion;
-//
-//const u8 audioMuxLsb = 14;
-
-
-
 
 /*------------------------------------------------------------------------------------------------*/
 //  __OSC4T__
@@ -495,46 +431,6 @@ struct semSvfParam_type semlParam;
 
 
 /*------------------------------------------------------------------------------------------------*/
-// define struct for DDL3 CTRL parameters
-
-//u32 DDL3CTRL_CH1Val;	// odmkDDL3_0 delayLength ctrl - 32 bit bus {wetMix[15:0], dLengthFlag[0:0], delayLength[14:0]}
-//u32 DDL3CTRL_CH2Val;	// odmkDDL3_0 feedback ctrl - 18 bit bus {fbMuxSel[0:0], selectExtFB[0:0], feedbackGain[15:0]}
-
-//static float wetMixFloat = 0.5;
-//static float feedbackGainFloat = 0;
-//
-//static u16 delayLengthTmp = 0;
-//
-//// DDL3 CH1
-//struct DDL3CTRL1_type {
-//	u32 delayLength: 15;		// range = 0 - ap_fixed<16,2> (*** re-gen IP to change dataType from ap_fixed to ap_ufixed..)
-//	bool dLengthFlag: 1;
-//	u16 wetMix: 16;				// range = 0.0:1.0 <-> ap_fixed<16,2> (*** re-gen IP to change dataType from ap_fixed to ap_ufixed..)
-//};
-//
-//union DDL3CTRL1_u {
-//	u32 DDL3CTRL_CH1Val;
-//	struct DDL3CTRL1_type DDL3CTRL1;
-//};
-//
-//static union DDL3CTRL1_u DDL3CTRL1Union;
-//
-//
-//// DDL3 CH2
-//struct DDL3CTRL2_type {
-//	u16 feedbackGain: 16;
-//	bool selectExtFB: 1;
-//	bool fbMuxSel: 1;
-//};
-//
-//union DDL3CTRL2_u {
-//	u32 DDL3CTRL_CH2Val;
-//	struct DDL3CTRL2_type DDL3CTRL2;
-//};
-//
-//static union DDL3CTRL2_u DDL3CTRL2Union;
-
-
 /*------------------------------------------------------------------------------------------------*/
 // define DDL4 CTRL parameters
 
@@ -606,14 +502,7 @@ void ftoa(char *buffer, float d, int precision);
 void odmkInfoScreen(void *oledrgbPtr, float bpm);
 void odmkAudioMuxScreen(void *oledrgbPtr, int muxSel);
 void odmkFaderMuxScreen(void *oledrgbPtr, u8 faderSel);
-void odmkFader1MuxScreen(void *oledrgbPtr, int fader1Sel);
-void odmkFader2MuxScreen(void *oledrgbPtr, int fader2Sel);
-void odmkFader3MuxScreen(void *oledrgbPtr, int fader3Sel);
 void faderVal2Screen(void *oledrgbPtr, u8 faderSel, float faderVal, u8 faderNum);
-void odmkFader1_val2Screen(void *oledrgbPtr, u8 fader1Sel, float fader1Val);
-void odmkFader2_val2Screen(void *oledrgbPtr, u8 fader2Sel, float fader2Val);
-void odmkFader3_val2Screen(void *oledrgbPtr, u8 fader3Sel, float fader3Val);
-//void odmkFader4_val2Screen(void *oledrgbPtr, u8 fader4Sel, float fader4Val);
 void setFcAndRes_ARM(float sampleRate, float cutoff, float resonance, struct moogHLParam_type *fParamSW);
 void volCtrlDB_update(void *VOLCTRLPtr, u8 rot_AB);
 void osc1StepCtrl_update(void *OSCF1Ptr, u8 rot_AB);
@@ -1177,86 +1066,6 @@ void processSWT() {
 }
 
 
-//void processSWT() {
-//	/*------------------------------------------------------------------------------*/
-//	// read and process switch states
-//
-//	swsUnion.swValue = XGpio_DiscreteRead(&LEDSWSInst, 2);
-//
-//	// update Audio Mux Select
-//	auMuxUnion.audioSelect.audioMux3_0 = (u8)(3&swsUnion.swValue);
-//	if (audioMux3_prev != 3 && auMuxUnion.audioSelect.audioMux3_0 == 3) {
-//		printf("Enabled Filter Gain Compensation\n");
-//		printf("volCtrlDB = %f,   volCtrlVal = %d\n", volCtrlDB, (int)volCtrlVal);
-//		//volCtrlDB+=filtVolScale;	// ?doesn't work?
-//		volCtrlDB-=6.0;
-//		if (volCtrlDB <= 0.0) {
-//			volCtrlDB = 0.0;		// 0 DB, Max Volume
-//		}
-//		volCtrlVal = (u32)maxVolVal*(pow((float)10.0, -volCtrlDB/20));
-//		XGpio_DiscreteWrite(&VOLWSCTRLInst, 1, volCtrlVal);
-//		audioMux3_prev = auMuxUnion.audioSelect.audioMux3_0;
-//	} else if(audioMux3_prev == 3 && auMuxUnion.audioSelect.audioMux3_0 != 3) {
-//		printf("Disabled Filter Gain Compensation\n");
-//		printf("volCtrlDB = %f,   volCtrlVal = %d\n", volCtrlDB, (int)volCtrlVal);
-//		//volCtrlDB-=filtVolScale;
-//		volCtrlDB+=6.0 ;
-//		if (volCtrlDB >= 140.0) {
-//			volCtrlDB = 140.0;		// -140 DB, Min Volume
-//		}
-//		volCtrlVal = (u32)maxVolVal*(pow((float)10.0, -volCtrlDB/20));
-//		XGpio_DiscreteWrite(&VOLWSCTRLInst, 1, volCtrlVal);
-//		audioMux3_prev = auMuxUnion.audioSelect.audioMux3_0;
-//	}
-//
-//	// update filter Data In Mux (filterInMux3Stereo) - sw3&sw4
-//	auMuxUnion.audioSelect.filterInMuxSel = (u8)(12&swsUnion.swValue)>>2;
-//	printf("filterInMuxSel = %d\n", (int)auMuxUnion.audioSelect.filterInMuxSel);
-//	if (auMuxUnion.audioSelect.filterInMuxSel == 0) {
-//		printf("Filter Input: Source Direct\n");
-//	} else if (auMuxUnion.audioSelect.filterInMuxSel == 1) {
-//		printf("Filter Input: DDL\n");
-//	} else {
-//		printf("Filter Input: SSB Modulation\n");
-//	}
-//
-//	// update DDL Data In Mux (ddlInMux2Stereo) - sw5
-//	auMuxUnion.audioSelect.ddlInMuxSel = swsUnion.switches.sw5;
-//	if (auMuxUnion.audioSelect.ddlInMuxSel == 0) {
-//		printf("Filter Input: Source Direct\n");
-//	} else {
-//		printf("Filter Input: SSB Modulation\n");
-//	}
-//
-//	// update DDL selectExtFB - sw6
-//	auMuxUnion.audioSelect.ddlExtFBSel = swsUnion.switches.sw6;
-//	if (swsUnion.switches.sw6 == 1) {
-//		printf("DDL selectExtFB = %d\n", swsUnion.switches.sw6);
-//	} else {
-//		printf("DDL selectExtFB = %d\n", swsUnion.switches.sw6);
-//	}
-//	// update DDL feedbackIn Mux Select {CH1: SSB, CH2: Filter} - sw7
-//	auMuxUnion.audioSelect.ddlFBSrcMuxSel = swsUnion.switches.sw7;
-//	if (swsUnion.switches.sw7 == 1) {
-//		printf("DDL feedbackIn Mux Sel = %d\n", swsUnion.switches.sw7);
-//	} else {
-//		printf("DDL feedbackIn Mux Sel = %d\n", swsUnion.switches.sw7);
-//	}
-//
-//	// update Waveshaper Bypass Mux Select - sw8
-//	auMuxUnion.audioSelect.wsBypassSel = swsUnion.switches.sw8;
-//	if (swsUnion.switches.sw8 == 1) {
-//		printf("Waveshaper Bypass: OFF\n");
-//	} else {
-//		printf("Waveshaper Bypass: ON\n");
-//	}
-//
-//	XGpio_DiscreteWrite(&AUDIOMUXInst, 1, auMuxUnion.audioMuxSel);
-//	//XGpio_DiscreteWrite(&DDL4CTRLInst, 2, DDL4CTRL2Union.DDL4CTRL_CH2Val);
-//
-//}
-
-
 /*------------------------------------------------------------------------------------------------*/
 /*------------------------------------------------------------------------------------------------*/
 // INTERRUPT HANDLER FUNCTIONS
@@ -1653,63 +1462,6 @@ void ROTARY1_Intr_Handler(void *InstancePtr)
 
 }
 
-//void ROTARY1_Intr_Handler(void *InstancePtr)
-//{
-//
-//	// Disable GPIO interrupts
-//	XGpio_InterruptDisable(InstancePtr, ROTARY_INT);
-//
-//	// Ignore additional button presses
-//	if ((XGpio_InterruptGetStatus(InstancePtr) & ROTARY_INT) != ROTARY_INT) {
-//		return;
-//	}
-//
-//	rotary1_AB = XGpio_DiscreteRead(InstancePtr, 1);
-//	printf("ROTARY1_Intr_H: rotary1_AB = %d\n\r", rotary1_AB);
-//
-////	if (fader1MuxSel == 0) {
-////		//printf("Master Vol Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-////		volCtrlDB_update(&VOLWSCTRLInst, rotary1_AB);
-//
-//	if (fader1MuxSel == 0) {
-//		//printf("PWM Freq Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-//		pwmStepCtrl_update(&OSCF2PWMStepInst, rotary1_AB);
-//		fader1Lvl = (float)oscPWMStepVal;
-//
-//	} else if (fader1MuxSel == 1) {
-//		//printf("SSB Freq Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-//		ssbStepCtrl_update(&OSCF1SSBStepInst, rotary1_AB);
-//		fader1Lvl = (float)ssbSetStepVal;
-//
-//	} else if (fader1MuxSel == 2) {
-//		//printf("FLT Cutoff Freq Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-//		mooghlCutCtrl_update(&MHLALPHAKInst, &MHLCTRL1Inst, &MHLCTRL2Inst, rotary1_AB);
-//		fader1Lvl = mooghlCutoff;
-//
-//	} else if (fader1MuxSel == 3) {
-//		//printf("FLT Resonance Gain Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-//		mooghlResCtrl_update(&MHLALPHAKInst, &MHLCTRL1Inst, &MHLCTRL2Inst, rotary1_AB);
-//		fader1Lvl = mooghlRes;
-//
-//	} else if (fader1MuxSel == 4) {
-//		//printf("Waveshaper1 Gain Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-//		wsGainCtrl_update(&VOLWSCTRLInst, rotary1_AB);
-//		fader1Lvl = wsGainFloat;
-//
-//	} else {
-//		pwmStepCtrl_update(&OSCF2PWMStepInst, rotary1_AB);
-//	}
-//
-//	sysmode = 6;
-//	trigOnce = 1;
-//
-//    (void)XGpio_InterruptClear(InstancePtr, ROTARY_INT);
-//
-//    // Enable GPIO interrupts
-//    XGpio_InterruptEnable(InstancePtr, ROTARY_INT);
-//
-//}
-
 
 //----------------------------------------------------
 // Rotary Encoder INTERRUPT HANDLER CH2
@@ -1742,60 +1494,6 @@ void ROTARY2_Intr_Handler(void *InstancePtr)
 }
 
 
-//void ROTARY2_Intr_Handler(void *InstancePtr)
-//{
-//
-//	// Disable GPIO interrupts
-//	XGpio_InterruptDisable(InstancePtr, ROTARY_INT);
-//
-//	// Ignore additional button presses
-//	if ((XGpio_InterruptGetStatus(InstancePtr) & ROTARY_INT) != ROTARY_INT) {
-//		return;
-//	}
-//
-//	rotary2_AB = XGpio_DiscreteRead(InstancePtr, 1);
-//
-//	if (fader2MuxSel == 0) {
-//		//printf("PWM Freq Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-//		pwmStepCtrl_update(&OSCF2PWMStepInst, rotary2_AB);
-//		fader2Lvl = (float)oscPWMStepVal;
-//
-//	} else if (fader2MuxSel == 1) {
-//		//printf("SSB Freq Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-//		ssbStepCtrl_update(&OSCF1SSBStepInst, rotary2_AB);
-//		fader2Lvl = (float)ssbSetStepVal;
-//
-//	} else if (fader2MuxSel == 2) {
-//		//printf("FLT Cutoff Freq Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-//		mooghlCutCtrl_update(&MHLALPHAKInst, &MHLCTRL1Inst, &MHLCTRL2Inst, rotary2_AB);
-//		fader2Lvl = mooghlCutoff;
-//
-//	} else if (fader2MuxSel == 3) {
-//		//printf("FLT Resonance Gain Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-//		mooghlResCtrl_update(&MHLALPHAKInst, &MHLCTRL1Inst, &MHLCTRL2Inst, rotary2_AB);
-//		fader2Lvl = mooghlRes;
-//
-//	} else if (fader2MuxSel == 4) {
-//		//printf("Waveshaper1 Gain Ctrl: Fader MuxSel = %d\n\r",fader1MuxSel);
-//		wsGainCtrl_update(&VOLWSCTRLInst, rotary2_AB);
-//		fader2Lvl = wsGainFloat;
-//
-//	} else {
-//		pwmStepCtrl_update(&OSCF2PWMStepInst, rotary2_AB);
-//		fader2Lvl = (float)oscPWMStepVal;
-//	}
-//
-//	sysmode = 7;
-//	trigOnce = 1;
-//
-//    (void)XGpio_InterruptClear(InstancePtr, ROTARY_INT);
-//
-//    // Enable GPIO interrupts
-//    XGpio_InterruptEnable(InstancePtr, ROTARY_INT);
-//
-//}
-
-
 //----------------------------------------------------
 // Rotary Encoder INTERRUPT HANDLER CH3
 // - called by the rotary encoder interrupt, performs
@@ -1825,120 +1523,6 @@ void ROTARY3_Intr_Handler(void *InstancePtr)
     XGpio_InterruptEnable(InstancePtr, ROTARY_INT);
 
 }
-
-
-//void ROTARY3_Intr_Handler(void *InstancePtr)
-//{
-//
-//	// Disable GPIO interrupts
-//	XGpio_InterruptDisable(InstancePtr, ROTARY_INT);
-//
-//	// Ignore additional button presses
-//	if ((XGpio_InterruptGetStatus(InstancePtr) & ROTARY_INT) != ROTARY_INT) {
-//		return;
-//	}
-//
-//	rotary3_AB = XGpio_DiscreteRead(InstancePtr, 1);
-//
-//	if (fader3MuxSel == 0) {
-//
-//		//printf("DDL Wet/Dry Ctrl: Fader2 MuxSel = %d\n\r",fader2MuxSel);
-//		// DDL Wet/Dry 15bit {0 = 100% Dry : 32767 100% Wet}
-//		if(rotary3_AB == 0) {
-//			//printf("Rotary Enc -Left- rotary2_AB = %d\n", rotary2_AB);
-//			wetMixFloat-=ddlWetDryScale;
-//			if (wetMixFloat <= 0.0) wetMixFloat = 0.0;		// -140 DB, Min Volume
-//			DDL4CTRL1Union.DDL4CTRL1.wetMix = (u16)(wetMixFloat*(1<<ddlCtrlBwidth));
-//			//printf("wetMixFloat = %f,  wetMix = %d\n", wetMixFloat, (int)DDL3CTRL1Union.DDL3CTRL1.wetMix);
-//			XGpio_DiscreteWrite(&DDL4CTRLInst, 1, DDL4CTRL1Union.DDL4CTRL_CH1Val);
-//		}
-//		else if(rotary3_AB == 2) {
-//			//printf("Rotary Enc -Right- rotary2_AB = %d\n", rotary2_AB);
-//			wetMixFloat+=ddlWetDryScale;
-//			if (wetMixFloat >= 1.0) wetMixFloat = 1.0;
-//			DDL4CTRL1Union.DDL4CTRL1.wetMix = (u16)(wetMixFloat*(1<<ddlCtrlBwidth));
-//			//printf("wetMixFloat = %f,  wetMix = %d\n", wetMixFloat, (int)DDL3CTRL1Union.DDL3CTRL1.wetMix);
-//			XGpio_DiscreteWrite(&DDL4CTRLInst, 1, DDL4CTRL1Union.DDL4CTRL_CH1Val);
-//		}
-//		else {
-//		}
-//		fader3Lvl = wetMixFloat*100;
-//
-//	} else if (fader3MuxSel == 1) {
-//
-//		//printf("DDL Length Ctrl: Fader2 MuxSel = %d\n\r",fader2MuxSel);
-//		// DDL Length control {0 samples MIN : ? samples MAX}
-//		if(rotary3_AB == 0) {
-//			//printf("Rotary Enc -Left- rotary1_AB = %d\n\r",rotary2_AB);
-//
-//			delayLengthTmp-=ddlLengthScale;
-//			if (delayLengthTmp < 0 || delayLengthTmp > maxDlyLength) delayLengthTmp = 0;
-//
-//			DDL4CTRL2Union.DDL4CTRL2.delayLength = delayLengthTmp;
-//			printf("delayLength = %d\n", (int)DDL4CTRL2Union.DDL4CTRL2.delayLength);
-//			DDL4CTRL2Union.DDL4CTRL2.dLengthFlag = 1;
-//			XGpio_DiscreteWrite(&DDL4CTRLInst, 2, DDL4CTRL2Union.DDL4CTRL_CH2Val);
-//			usleep(8);	// wait small amount of time to latch in new delayLength
-//			DDL4CTRL2Union.DDL4CTRL2.dLengthFlag = 0;
-//			XGpio_DiscreteWrite(&DDL4CTRLInst, 2, DDL4CTRL2Union.DDL4CTRL_CH2Val);
-//
-//		} else if(rotary3_AB == 2) {
-//			//printf("Rotary Enc -Right- rotary1_AB = %d\n\r",rotary2_AB);
-//
-//			delayLengthTmp+=ddlLengthScale;
-//			if (delayLengthTmp > maxDlyLength) delayLengthTmp = maxDlyLength;
-//
-//			DDL4CTRL2Union.DDL4CTRL2.delayLength = delayLengthTmp;
-//			printf("delayLength = %d\n", (int)DDL4CTRL2Union.DDL4CTRL2.delayLength);
-//			DDL4CTRL2Union.DDL4CTRL2.dLengthFlag = 1;
-//			XGpio_DiscreteWrite(&DDL4CTRLInst, 2, DDL4CTRL2Union.DDL4CTRL_CH2Val);
-//			usleep(8);	// wait small amount of time to latch in new delayLength
-//			DDL4CTRL2Union.DDL4CTRL2.dLengthFlag = 0;
-//			XGpio_DiscreteWrite(&DDL4CTRLInst, 2, DDL4CTRL2Union.DDL4CTRL_CH2Val);
-//
-//		}
-//		else {
-//		}
-//		fader3Lvl = (float)(delayLengthTmp>>16);		// shift 8 MSB, 8 frac
-//
-//
-//	} else if (fader3MuxSel == 2) {
-//
-//		//printf("DDL feedback Gain Ctrl: Fader2 MuxSel = %d\n\r",fader2MuxSel);
-//		// DDL feedback Gain control {0 samples MIN : ? samples MAX}
-//		if(rotary3_AB == 0) {
-//			//printf("Rotary Enc -Left- rotary1_AB = %d\n\r", rotary2_AB);
-//			feedbackGainFloat-=ddlFbGainScale;
-//			if (feedbackGainFloat < 0) feedbackGainFloat = 0;
-//			DDL4CTRL1Union.DDL4CTRL1.feedbackGain = (u16)(feedbackGainFloat*(1<<ddlCtrlBwidth));
-//			//printf("feedbackGainFloat = %f,   feedbackGain = %d\n", feedbackGainFloat, (int)DDL3CTRL2Union.DDL3CTRL2.feedbackGain);
-//			XGpio_DiscreteWrite(&DDL4CTRLInst, 1, DDL4CTRL1Union.DDL4CTRL_CH1Val);
-//		}
-//		else if(rotary3_AB == 2) {
-//			//printf("Rotary Enc -Right- rotary1_AB = %d\n\r", rotary2_AB);
-//			feedbackGainFloat+=ddlFbGainScale;
-//			if (feedbackGainFloat >= 1.0) {
-//				feedbackGainFloat = 1.0;
-//			}
-//			DDL4CTRL1Union.DDL4CTRL1.feedbackGain = (u16)(feedbackGainFloat*(1<<ddlCtrlBwidth));
-//			//printf("feedbackGainFloat = %f,   feedbackGain = %d\n", feedbackGainFloat, (int)DDL3CTRL2Union.DDL3CTRL2.feedbackGain);
-//			XGpio_DiscreteWrite(&DDL4CTRLInst, 1, DDL4CTRL1Union.DDL4CTRL_CH1Val);
-//		}
-//		else {
-//		}
-//		fader3Lvl = feedbackGainFloat*100;
-//
-//	}
-//
-//	sysmode = 8;
-//	trigOnce = 1;
-//
-//    (void)XGpio_InterruptClear(InstancePtr, ROTARY_INT);
-//
-//    // Enable GPIO interrupts
-//    XGpio_InterruptEnable(InstancePtr, ROTARY_INT);
-//
-//}
 
 
 //----------------------------------------------------
@@ -2009,47 +1593,6 @@ void ROTARY4_Intr_Handler(void *InstancePtr)
 
 /*------------------------------------------------------------------------------------------------*/
 /*------------------------------------------------------------------------------------------------*/
-
-//----------------------------------------------------
-// AudioMux3 update function - Selects main Audio out
-//----------------------------------------------------
-//void SWS_State(void *audioMuxGpioInstPtr, u8 auMux3sel)
-//void audioMux3_switch(void *audioMuxGpioInstPtr, u8 auMux3sel)
-//{
-//
-//	swsUnion.swValue = XGpio_DiscreteRead(&LEDSWSInst, 2);
-//
-//	// Handel Audio Mux 2 - selects Dry/SSBMod/Filter
-//	if(auMux3sel == 0) {
-//		// Bypass EFFX - Dry Output
-//		printf("Audio Mux 3 {00}: No EFFX\n");
-//		auMuxUnion.audioSelect.audioMux3_0 = 0;
-//		XGpio_DiscreteWrite(audioMuxGpioInstPtr, 2, auMuxUnion.audioMuxSel);
-//		sysmode = 3;
-//	}
-//	else if(auMux3sel == 1) {
-//		// SSB Modulation EFFX
-//		printf("Audio Mux 3 {01}: SSB Modulation EFFX\n");
-//		auMuxUnion.audioSelect.audioMux3_0 = 1;
-//		XGpio_DiscreteWrite(audioMuxGpioInstPtr, 2, auMuxUnion.audioMuxSel);
-//		sysmode = 3;
-//	}
-//	else if(auMux3sel == 2) {
-//		// Lowpass Filter
-//		printf("Audio Mux 3 {10}: Lowpass Filter\n");
-//		auMuxUnion.audioSelect.audioMux3_0 = 2;
-//		XGpio_DiscreteWrite(audioMuxGpioInstPtr, 2, auMuxUnion.audioMuxSel);
-//		sysmode = 3;
-//	}
-//	else if(auMux3sel == 3) {
-//		// Bypass EFFX - Dry Output
-//		printf("Audio Mux 3 {11}: No EFFX\n");
-//		auMuxUnion.audioSelect.audioMux3_0 = 0;
-//		XGpio_DiscreteWrite(audioMuxGpioInstPtr, 2, auMuxUnion.audioMuxSel);
-//		sysmode = 3;
-//	}
-//
-//}
 
 
 //----------------------------------------------------
@@ -2685,211 +2228,20 @@ void faderVal2Screen(void *oledrgbPtr, u8 faderSel, float faderVal, u8 faderNum)
 }
 
 
-void odmkFader1_val2Screen(void *oledrgbPtr, u8 fader1Sel, float fader1Val)
-{
-	char ch;
-
-	//char fader2ValStr[12];
-	//ftoa(fader2ValStr, fader2Val, 1);
-
-	/* output to screen */
-	char FADER1_0ScrnStr[12] = "<PWM FREQ>";
-	char FADER1_1ScrnStr[12] = "<SSB FREQ>";
-	char FADER1_2ScrnStr[12] = "<FLT CUT>";
-	char FADER1_3ScrnStr[12] = "<FLT RES>";
-	char FADER1_4ScrnStr[12] = "<WS GAIN>";
-
-
-	for (ch = 0; ch < 5; ch++) {
-		OLEDrgb_DefUserChar(oledrgbPtr, ch, &rgbUserFont[ch*8]);
-	}
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 0, 255, 0));	// red
-	OLEDrgb_SetCursor(oledrgbPtr, 1, 1);
-	OLEDrgb_PutString(oledrgbPtr, "FADER 1");
-
-
-	switch(fader1Sel) {
-		case 0:
-			//printf("Fader1Mux screen: <<PWM FREQ>> MuxSel = %d\n\r", fader1Sel);
-			faderScrnPrint(oledrgbPtr, FADER1_0ScrnStr, fader1Val);
-			break;
-
-		case 1:
-			//printf("Fader1Mux screen: <<SSB FREQ>> MuxSel = %d\n\r", fader1Sel);
-			faderScrnPrint(oledrgbPtr, FADER1_1ScrnStr, fader1Val);
-			break;
-
-		case 2:
-			//printf("Fader1Mux screen: <<FLT CUT>> MuxSel = %d\n\r", fader1Sel);
-			faderScrnPrint(oledrgbPtr, FADER1_2ScrnStr, fader1Val);
-			break;
-
-		case 3:
-			//printf("Fader1Mux screen: <<FLT RES>> MuxSel = %d\n\r", fader1Sel);
-			faderScrnPrint(oledrgbPtr, FADER1_3ScrnStr, fader1Val);
-			break;
-
-		case 4:
-			//printf("Fader1Mux screen: <<WS GAIN>> MuxSel = %d\n\r", fader1Sel);
-			faderScrnPrint(oledrgbPtr, FADER1_4ScrnStr, fader1Val);
-			break;
-
-		default:
-			//printf("Fader1Mux screen: <<PWM FREQ>> MuxSel = %d\n\r", fader1Sel);
-			faderScrnPrint(oledrgbPtr, FADER1_0ScrnStr, fader1Val);
-			break;
-
-	}
-}
-
-
-void odmkFader2_val2Screen(void *oledrgbPtr, u8 fader2Sel, float fader2Val)
-{
-	char ch;
-	char fader2ValStr[12];
-
-	ftoa(fader2ValStr, fader2Val, 1);
-
-	/* output to screen */
-
-	for (ch = 0; ch < 5; ch++) {
-		OLEDrgb_DefUserChar(oledrgbPtr, ch, &rgbUserFont[ch*8]);
-	}
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 0, 255, 0));	// red
-	OLEDrgb_SetCursor(oledrgbPtr, 1, 1);
-	OLEDrgb_PutString(oledrgbPtr, "FADER 2");
-
-//	OLEDrgb_SetCursor(oledrgbPtr, 2, 4);
-//	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 255,  0, 0)); // blue font
-//	OLEDrgb_PutString(oledrgbPtr, "FADE2_1");
-//
-//	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 200, 200, 44));	//captain cobra grey
-//	OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12,44));
-	OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-
-
-	switch(fader2Sel) {
-		case 0:
-			//printf("Fader2Mux screen: <<DDL MIX>> MuxSel = %d\n\r", fader2Sel);
-
-			OLEDrgb_SetCursor(oledrgbPtr, 1, 4);
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(255,  0, 0)); // blue font
-			OLEDrgb_PutString(oledrgbPtr, "<DDL MIX>");
-
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 200, 44));	//captain cobra grey
-			OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12, 44));
-			OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-			OLEDrgb_PutString(oledrgbPtr, fader2ValStr);
-			break;
-
-		case 1:
-			//printf("Fader2Mux screen: <<DDL LEN>> MuxSel = %d\n\r", fader2Sel);
-
-			OLEDrgb_SetCursor(oledrgbPtr, 1, 4);
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(255,  0, 0)); // blue font
-			OLEDrgb_PutString(oledrgbPtr, "<DDL LEN>");
-
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 200, 44));	//captain cobra grey
-			OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12, 44));
-			OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-			OLEDrgb_PutString(oledrgbPtr, fader2ValStr);
-			break;
-
-		case 2:
-			//printf("Fader2Mux screen: <<DDL FB G>> MuxSel = %d\n\r", fader2Sel);
-
-			OLEDrgb_SetCursor(oledrgbPtr, 1, 4);
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(255,  0, 0)); // blue font
-			OLEDrgb_PutString(oledrgbPtr, "<DDL FB G>");
-
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 200, 44));	//captain cobra grey
-			OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12, 44));
-			OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-			OLEDrgb_PutString(oledrgbPtr, fader2ValStr);
-			break;
-
-		default:
-			//printf("Fader2Mux screen: <<FADE2> MuxSel = %d\n\r", fader2Sel);
-
-			OLEDrgb_SetCursor(oledrgbPtr, 1, 4);
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(255,  0, 0)); // blue font
-			OLEDrgb_PutString(oledrgbPtr, "<FADER 2>");
-
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 200, 44));	//captain cobra grey
-			OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-
-			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12, 44));
-			OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-			OLEDrgb_PutString(oledrgbPtr, fader2ValStr);
-			break;
-
-	}
-}
-
-
-void odmkFader3_val2Screen(void *oledrgbPtr, u8 fader3Sel, float fader3Val)
-{
-	char ch;
-
-	//char fader2ValStr[12];
-	//ftoa(fader2ValStr, fader2Val, 1);
-
-	/* output to screen */
-	char FADER3_0ScrnStr[12] = "<MSTR VOL>";
-	char FADER3_1ScrnStr[12] = "<OSC1 FRQ>";
-	char FADER3_2ScrnStr[12] = "<LFO1 FRQ>";
-	char FADER3_3ScrnStr[12] = "<FADER3_3>";
-
-
-	for (ch = 0; ch < 5; ch++) {
-		OLEDrgb_DefUserChar(oledrgbPtr, ch, &rgbUserFont[ch*8]);
-	}
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(0, 255, 0));	// red
-	OLEDrgb_SetCursor(oledrgbPtr, 1, 1);
-	OLEDrgb_PutString(oledrgbPtr, "FADER 3");
-
-
-	switch(fader3Sel) {
-		case 0:
-			//printf("Fader3Mux screen: <<MSTR VOL>> MuxSel = %d\n\r", fader3Sel);
-			faderScrnPrint(oledrgbPtr, FADER3_0ScrnStr, fader3Val);
-			break;
-
-		case 1:
-			//printf("Fader3Mux screen: <<OSC1 FRQ>> MuxSel = %d\n\r", fader3Sel);
-			faderScrnPrint(oledrgbPtr, FADER3_1ScrnStr, fader3Val);
-			break;
-
-		case 2:
-			//printf("Fader3Mux screen: <<LFO1 FRQ>> MuxSel = %d\n\r", fader3Sel);
-			faderScrnPrint(oledrgbPtr, FADER3_2ScrnStr, fader3Val);
-			break;
-
-		default:
-			//printf("Fader3Mux screen: <<...>> MuxSel = %d\n\r", fader3Sel);
-			faderScrnPrint(oledrgbPtr, FADER3_3ScrnStr, fader3Val);
-			break;
-
-	}
-}
-
-
-//void odmkFader3_val2Screen(void *oledrgbPtr, int fader3Sel, float fader3Val)
+//void odmkFader1_val2Screen(void *oledrgbPtr, u8 fader1Sel, float fader1Val)
 //{
 //	char ch;
 //
+//	//char fader2ValStr[12];
+//	//ftoa(fader2ValStr, fader2Val, 1);
+//
 //	/* output to screen */
+//	char FADER1_0ScrnStr[12] = "<PWM FREQ>";
+//	char FADER1_1ScrnStr[12] = "<SSB FREQ>";
+//	char FADER1_2ScrnStr[12] = "<FLT CUT>";
+//	char FADER1_3ScrnStr[12] = "<FLT RES>";
+//	char FADER1_4ScrnStr[12] = "<WS GAIN>";
+//
 //
 //	for (ch = 0; ch < 5; ch++) {
 //		OLEDrgb_DefUserChar(oledrgbPtr, ch, &rgbUserFont[ch*8]);
@@ -2897,86 +2249,41 @@ void odmkFader3_val2Screen(void *oledrgbPtr, u8 fader3Sel, float fader3Val)
 //
 //	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 0, 255, 0));	// red
 //	OLEDrgb_SetCursor(oledrgbPtr, 1, 1);
-//	OLEDrgb_PutString(oledrgbPtr, "FADER3");
+//	OLEDrgb_PutString(oledrgbPtr, "FADER 1");
 //
-////	OLEDrgb_SetCursor(oledrgbPtr, 2, 4);
-////	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 255,  0, 0)); // blue font
-////	OLEDrgb_PutString(oledrgbPtr, "FADE3_1");
-////
-////	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 200, 200, 44));	//captain cobra grey
-////	OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-////
-////	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12,44));
-////	OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
 //
-//	switch(fader3Sel) {
+//	switch(fader1Sel) {
 //		case 0:
-//			char displayStr[8];
-//			ftoa(displayStr, fader3Val, 1);
-//
-//			printf("Fader3Mux screen: <<...>> MuxSel = %d\n\r", fader3Sel);
-//
-//			OLEDrgb_SetCursor(oledrgbPtr, 2, 4);
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 255,  0, 0)); // blue font
-//			OLEDrgb_PutString(oledrgbPtr, "<FADE3_0>");
-//
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 200, 200, 44));	//captain cobra grey
-//			OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-//
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12,44));
-//			OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-//			OLEDrgb_PutString(oledrgbPtr, displayStr);
-//
+//			//printf("Fader1Mux screen: <<PWM FREQ>> MuxSel = %d\n\r", fader1Sel);
+//			faderScrnPrint(oledrgbPtr, FADER1_0ScrnStr, fader1Val);
 //			break;
 //
 //		case 1:
-//			printf("Fader3Mux screen: <<...>> MuxSel = %d\n\r", fader3Sel);
-//
-//			OLEDrgb_SetCursor(oledrgbPtr, 2, 4);
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 255,  0, 0)); // blue font
-//			OLEDrgb_PutString(oledrgbPtr, "<FADE3_0>");
-//
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 200, 200, 44));	//captain cobra grey
-//			OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-//
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12,44));
-//			OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-//			OLEDrgb_PutString(oledrgbPtr, "??");
+//			//printf("Fader1Mux screen: <<SSB FREQ>> MuxSel = %d\n\r", fader1Sel);
+//			faderScrnPrint(oledrgbPtr, FADER1_1ScrnStr, fader1Val);
 //			break;
 //
 //		case 2:
-//			printf("Fader3Mux screen: <<...>> MuxSel = %d\n\r", fader3Sel);
+//			//printf("Fader1Mux screen: <<FLT CUT>> MuxSel = %d\n\r", fader1Sel);
+//			faderScrnPrint(oledrgbPtr, FADER1_2ScrnStr, fader1Val);
+//			break;
 //
-//			OLEDrgb_SetCursor(oledrgbPtr, 2, 4);
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 255,  0, 0)); // blue font
-//			OLEDrgb_PutString(oledrgbPtr, "<FADE3_0>");
+//		case 3:
+//			//printf("Fader1Mux screen: <<FLT RES>> MuxSel = %d\n\r", fader1Sel);
+//			faderScrnPrint(oledrgbPtr, FADER1_3ScrnStr, fader1Val);
+//			break;
 //
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 200, 200, 44));	//captain cobra grey
-//			OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-//
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12,44));
-//			OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-//			OLEDrgb_PutString(oledrgbPtr, "??");
+//		case 4:
+//			//printf("Fader1Mux screen: <<WS GAIN>> MuxSel = %d\n\r", fader1Sel);
+//			faderScrnPrint(oledrgbPtr, FADER1_4ScrnStr, fader1Val);
 //			break;
 //
 //		default:
-//			printf("Fader3Mux screen: <<...>> MuxSel = %d\n\r", fader3Sel);
-//
-//			OLEDrgb_SetCursor(oledrgbPtr, 2, 4);
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 255,  0, 0)); // blue font
-//			OLEDrgb_PutString(oledrgbPtr, "<FADE3_0>");
-//
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 200, 200, 44));	//captain cobra grey
-//			OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-//
-//			OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12,44));
-//			OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-//			OLEDrgb_PutString(oledrgbPtr, "??");
+//			//printf("Fader1Mux screen: <<PWM FREQ>> MuxSel = %d\n\r", fader1Sel);
+//			faderScrnPrint(oledrgbPtr, FADER1_0ScrnStr, fader1Val);
 //			break;
 //
-//
 //	}
-//
 //}
 
 
