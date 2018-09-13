@@ -1,22 +1,39 @@
 /*------------------------------------------------------------------------------------------------*/
-/* ___::((odmkSoC_FX1.c))::___
+/* ___::((odmkSoCFX2.c))::___
 
    ___::((JIROBATA Programming Industries))::___
    ___::((ODMK:2018))::___
-   ___::((created by eschei))___
+   ___::((created by e.schei))___
 
-	Purpose: ARM software for odmkZyncSystem1
+	Purpose: ARM software for odmkSoCFX2
 	Device: zedboard - xc7z020clg484-1
-	Revision History: May 16, 2017 - initial
-	Revision History: Feb 03, 2018 - version 1_5
-	Revision History: May 11, 2018 - odmkSoC_FX1 version 1
+	Tools: Vivado IPI / SDK 2017.4
+
+	Revision History: May  16, 2017 - initial
+	Revision History: Feb  03, 2018 - version 1_5
+	Revision History: May  11, 2018 - odmkSoC_FX1
+	Revision History: June 9,  2018 - odmkSoCFX2 initial
+	Revision History: Sept 13, 2018 - odmkSoCFX2 revision 1
 */
 
 /*------------------------------------------------------------------------------------------------*/
 
 /*---%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%---*
 
-ARM software for driving peripherals, etc. used for Zedboard
+Zynq xc7z020 Bare-metal ARM software
+for system configuration and parameter control of odmkSoCFX2 effects processor
+
+Current Peripheral setup:
+
+4x Pmod Rotary Encoders
+1x PmodOLEDrgb 96x64 pixel RGB display
+1x Pmod BTN0 (4 button module)
+
+1x USB-Uart (optional)
+
+8x onboard switches (zedboard)
+5x onboard buttons (zedboard)
+
 
 *---%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%---*/
 
@@ -234,8 +251,6 @@ static int ledState = 0;						// used for LED manipulation function
 static bool trigOnce = 1;
 
 static int btnValue;
-static bool btnDirection = 1;
-
 static int btn0x1_value;
 
 // fader Mux select
@@ -266,17 +281,6 @@ static float fader4Lvl = 0;
 
 
 /*------------------------------------------------------------------------------------------------*/
-//// define types for switches
-//struct sws_type {
-//	bool sw1: 1;		// Audio Out Mux Select:      				bit0
-//	bool sw2: 1;		// Audio Out Mux Select:      				bit1
-//	bool sw3: 1;		// filterInMuxSel Mux Select: 				bit0
-//	bool sw4: 1;		// filterInMuxSel Mux Select: 				bit1
-//	bool sw5: 1;		// ddlInMuxSel Mux Select:    				bit0
-//	bool sw6: 1;		// Delay Int/Ext FB Sel (odmkDDL4_0):		bit0
-//	bool sw7: 1;		// Delay FB Input Sel (odmkDDL4_0):			bit0
-//	bool sw8: 1;		// wavshaperBypass Mux Select:				bit0
-//};
 
 // define types for switches
 struct sws_type {
@@ -366,6 +370,7 @@ static union auMux_u auMuxUnion;
 //
 // 560 Hz osc output 384829 (hex: 0x00005DF3D)
 // 560 / 2 : 192414 (hex: 0x00002EF9E)
+
 //static int oscFreq1StepVal = 192414;
 static int oscFreq1StepVal = 60836;		// ~ 88.53 Hz - (??check calc??)
 static int oscFreq2StepVal = 317;		// ~ 118.09 Hz - (??check calc??)
@@ -501,7 +506,7 @@ void odmkZynqLED1(unsigned long uSECPERBEAT);
 void ftoa(char *buffer, float d, int precision);
 void odmkInfoScreen(void *oledrgbPtr, float bpm);
 void odmkAudioMuxScreen(void *oledrgbPtr, int muxSel);
-void odmkFaderMuxScreen(void *oledrgbPtr, u8 faderSel);
+void odmkFaderMuxScreen(void *oledrgbPtr, u8 faderSel, u8 faderNum);
 void faderVal2Screen(void *oledrgbPtr, u8 faderSel, float faderVal, u8 faderNum);
 void setFcAndRes_ARM(float sampleRate, float cutoff, float resonance, struct moogHLParam_type *fParamSW);
 void volCtrlDB_update(void *VOLCTRLPtr, u8 rot_AB);
@@ -518,13 +523,6 @@ void semQCtrl_update(void *SEMCTRL1Ptr, void *SEMCTRL2Ptr, u8 rot_AB);
 /*------------------------------------------------------------------------------------------------*/
 /*------------------------------------------------------------------------------------------------*/
 // Miscellaneous FUNCTIONS
-
-//u32 auConcatUnion(u32 msbData, u32 lsbData, u8 lsbWidth) {
-//	u32 bitMask = (1<<lsbWidth) - 1;
-//	u32 audioMuxSelect = (auSrcMuxUnion.audioSrcMuxSel<<lsbWidth) + (bitMask&auMuxUnion.audioMuxSel);
-//	return audioMuxSelect;
-//}
-
 
 /*------------------------------------------------------------------------------------------------*/
 /*------------------------------------------------------------------------------------------------*/
@@ -1058,9 +1056,6 @@ void processSWT() {
 
 	}
 
-	//u32 audioMuxSelect = auConcatUnion(auSrcMuxUnion.audioSrcMuxSel, auMuxUnion.audioMuxSel, audioMuxLsb);
-	//printf("audioMuxSelect = %d\n", (int)audioMuxSelect );
-	//XGpio_DiscreteWrite( &AUDIOMUXInst, 1, audioMuxSelect );
 	XGpio_DiscreteWrite(&AUDIOMUXInst, 1, auMuxUnion.audioMuxSel);
 
 }
@@ -1106,40 +1101,14 @@ void BTN_Intr_Handler(void *InstancePtr)
 
 	// Lower Button pressed
 	else if(btnValue == 2) {
-		// Fader Mux Sel - selects the target for fader control
-		printf("BTN[%d] - Fader 2 Target Select\n", btnValue);
-
-		sysmode = 3;
-		trigOnce = 1;
-
-		if (fader2MuxSel == 12) {
-			fader2MuxSel = 0;
-		} else {
-			fader2MuxSel++;
-		}
+		// Empty Function
+		printf("BTN[%d] - Empty Function\n", btnValue);
 	}
 
 	// Left Button pressed
 	else if(btnValue == 4) {
-		trigOnce = 1;
 
-		if (swsUnion.switches.sw8 == 0) {
-			printf("BTN[%d] - Fader3 Target Select\n", btnValue);
-			sysmode = 4;
-			if (fader3MuxSel == 12) {
-				fader3MuxSel = 0;
-			} else {
-				fader3MuxSel++;
-			}
-		} else {
-			printf("BTN[%d] - Fader4 Target Select\n", btnValue);
-			sysmode = 5;
-			if (fader4MuxSel == 12) {
-				fader4MuxSel = 0;
-			} else {
-				fader4MuxSel++;
-			}
-		}
+		printf("BTN[%d] - Empty Function\n", btnValue);
 	}
 
 	// Right Button pressed
@@ -1150,20 +1119,12 @@ void BTN_Intr_Handler(void *InstancePtr)
 		sysmode = 1;
 		trigOnce = 1;
 
-		if (btnDirection == 0 && auMuxUnion.audioSelect.audioSrcMux == 4) {
+		if (auMuxUnion.audioSelect.audioSrcMux == 4) {
 			auMuxUnion.audioSelect.audioSrcMux = 0;
-		} else if (btnDirection == 1 && auMuxUnion.audioSelect.audioSrcMux == 0) {
-			auMuxUnion.audioSelect.audioSrcMux = 4;
 		} else {
-			if (btnDirection == 0) {
-				auMuxUnion.audioSelect.audioSrcMux++;
-			} else {
-				auMuxUnion.audioSelect.audioSrcMux--;
-			}
+			auMuxUnion.audioSelect.audioSrcMux++;
 		}
-		//u32 audioMuxSelect = (auSrcMuxUnion.audioSrcMuxSel<<14) + (16383&auMuxUnion.audioMuxSel);
-		//printf("Audio Mux Select = %d\n", (int)audioMuxSelect );
-		//u32 audioMuxSelect = auConcatUnion(auSrcMuxUnion.audioSrcMuxSel, auMuxUnion.audioMuxSel, audioMuxLsb);
+
 		printf("audioMuxSelect = %d\n", (int)auMuxUnion.audioMuxSel);
 
 		XGpio_DiscreteWrite( &AUDIOMUXInst, 1, auMuxUnion.audioMuxSel);
@@ -1172,25 +1133,9 @@ void BTN_Intr_Handler(void *InstancePtr)
 
 	// Top Button pressed
 	else if(btnValue == 16) {
-		// Fader1 Mux Sel - selects the target for fader1 control
-		printf("BTN[%d] - Fader1 Target Select\n", btnValue);
-		sysmode = 2;
-		trigOnce = 1;
-
-		if (btnDirection == 0 && fader1MuxSel == 12) {
-			fader1MuxSel = 0;
-		} else if (btnDirection == 1 && fader1MuxSel == 0) {
-			fader1MuxSel = 12;
-		} else {
-			if (btnDirection == 0) {
-				fader1MuxSel++;
-			} else {
-				fader1MuxSel--;
-			}
-		}
+		// Empty Function
+		printf("BTN[%d] - Empty Function\n", btnValue);
 	}
-
-	//printf("TEMP: BTN Intr Handler - exited case - fader1MuxSel = %i\n", fader1MuxSel);
 
 	usleep(300000);	//Wait 1/1000 seconds - button debounce
 
@@ -1200,7 +1145,6 @@ void BTN_Intr_Handler(void *InstancePtr)
     XGpio_InterruptEnable(&BTNInst, BTN_CH_MASK);
 
 }
-
 
 
 //----------------------------------------------------
@@ -1221,53 +1165,68 @@ void BTN0x1_Intr_Handler(void *InstancePtr)
 		return;
 	}
 
-	//usleep(50000);	//Wait 1/1000 seconds - button debounce
-
 	btn0x1_value = XGpio_DiscreteRead(InstancePtr, 1);
 
-	// Reset if center button pressed
+	//printf("Pmod BTN0 - btn0x1_value = %d\n", btn0x1_value);
+
 	if(btn0x1_value == 1) {
-		// -TEMPO- : left fader target=tempo  / tempo - LED BPM flash
-		printf("BTN0[%d] ???\n", btn0x1_value);
-		sysmode = 5;
+		// Fader1 Mux Sel - selects the target for fader1 control
+		printf("btn0x1[%d] - Fader1 Target Select\n", btn0x1_value);
+		sysmode = 2;
 		trigOnce = 1;
+
+		if (fader1MuxSel == 12) {
+			fader1MuxSel = 0;
+		} else {
+			fader1MuxSel++;
+		}
 	}
-	// Lower Button pressed
 	else if(btn0x1_value == 2) {
-		// Fader Mux Sel - selects the target for fader control
-		printf("btn0x1[%d] - ???\n", btn0x1_value);
-		//sysmode = 5;
-		//trigOnce = 1;
+		// Fader2 Mux Sel - selects the target for fader2 control
+		printf("btn0x1[%d] - Fader 2 Target Select\n", btn0x1_value);
+
+		sysmode = 3;
+		trigOnce = 1;
+
+		if (fader2MuxSel == 12) {
+			fader2MuxSel = 0;
+		} else {
+			fader2MuxSel++;
+		}
 
 	}
-	// Button 3 pressed
 	else if(btn0x1_value == 4) {
-		printf("btn0x1[%d] ???\n", btn0x1_value);
-		//sysmode = 5;
-		//trigOnce = 1;
+		// Fader2 Mux Sel - selects the target for fader2 control
+		printf("btn0x1[%d] - Fader3 Target Select\n", btn0x1_value);
+		sysmode = 4;
+		trigOnce = 1;
+		if (fader3MuxSel == 12) {
+			fader3MuxSel = 0;
+		} else {
+			fader3MuxSel++;
+		}
 
 	}
-	// Button 4 pressed
 	else if(btn0x1_value == 8) {
 		// Audio Mux Select - btn increments mux sel
-		printf("btn0x1[%d] ???\n", btn0x1_value);
-		//sysmode = 5;
-		//trigOnce = 1;
-
+		printf("BTN0x1[%d] - Fader4 Target Select\n", btn0x1_value);
+		sysmode = 5;
+		trigOnce = 1;
+		if (fader4MuxSel == 12) {
+			fader4MuxSel = 0;
+		} else {
+			fader4MuxSel++;
+		}
 
 	}
-	// default
+	// null case
 	else {
-		// default - null -
-		printf("btn0x1[%d] - default - null - \n", btn0x1_value);
-		//sysmode = 5;
-		//trigOnce = 1;
-
+		// - null -
+		printf("btn0x1[%d] - null - \n", btn0x1_value);
 	}
 
-	//printf("TEMP: BTN Intr Handler - exited case - fader1MuxSel = %i\n", fader1MuxSel);
-
-	//usleep(300000);	//Wait 1/1000 seconds - button debounce
+	usleep(300000);		// Wait 1/? seconds - button debounce
+						// prevents release-triggered interrupt
 
     (void)XGpio_InterruptClear(InstancePtr, BTN0_CH_MASK);
 
@@ -1275,7 +1234,6 @@ void BTN0x1_Intr_Handler(void *InstancePtr)
     XGpio_InterruptEnable(InstancePtr, BTN0_CH_MASK);
 
 }
-
 
 
 //----------------------------------------------------
@@ -1452,7 +1410,7 @@ void ROTARY1_Intr_Handler(void *InstancePtr)
 
 	rotary_select(&rotary1_AB, &fader1MuxSel, &fader1Lvl);
 
-	sysmode = 9;
+	sysmode = 6;
 	trigOnce = 1;
 
     (void)XGpio_InterruptClear(InstancePtr, ROTARY_INT);
@@ -1483,7 +1441,7 @@ void ROTARY2_Intr_Handler(void *InstancePtr)
 
 	rotary_select(&rotary2_AB, &fader2MuxSel, &fader2Lvl);
 
-	sysmode = 9;
+	sysmode = 7;
 	trigOnce = 1;
 
     (void)XGpio_InterruptClear(InstancePtr, ROTARY_INT);
@@ -1514,7 +1472,7 @@ void ROTARY3_Intr_Handler(void *InstancePtr)
 
 	rotary_select(&rotary3_AB, &fader3MuxSel, &fader3Lvl);
 
-	sysmode = 9;
+	sysmode = 8;
 	trigOnce = 1;
 
     (void)XGpio_InterruptClear(InstancePtr, ROTARY_INT);
@@ -1554,6 +1512,17 @@ void ROTARY4_Intr_Handler(void *InstancePtr)
     XGpio_InterruptEnable(InstancePtr, ROTARY_INT);
 
 }
+
+
+/*------------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+
+// SCENE Selecta
+
+
+
+
+
 
 
 /*------------------------------------------------------------------------------------------------*/
@@ -1628,7 +1597,6 @@ void odmkZynqLED1(unsigned long uSECPERBEAT)
 //----------------------------------------------------
 // - convert float to character array
 //----------------------------------------------------
-//char *ftoa(char *buffer, float d, int precision) {
 void ftoa(char *buffer, float d, int precision) {
 
 	long wholePart = (long) d;
@@ -1667,7 +1635,6 @@ void ftoa(char *buffer, float d, int precision) {
 		*endOfString = '\0';
 	}
 
-   //return buffer;
 }
 
 
@@ -1845,7 +1812,7 @@ void odmkAudioMuxScreen(void *oledrgbPtr, int muxSel)
 //----------------------------------------------------
 // - display Fader Target on OLEDRGB
 //----------------------------------------------------
-void odmkFaderMuxScreen(void *oledrgbPtr, u8 faderSel)
+void odmkFaderMuxScreen(void *oledrgbPtr, u8 faderSel, u8 faderNum)
 {
 	char ch;
 
@@ -1873,7 +1840,26 @@ void odmkFaderMuxScreen(void *oledrgbPtr, u8 faderSel)
 	OLEDrgb_PutString(oledrgbPtr, "::((o))::");
 	OLEDrgb_SetCursor(oledrgbPtr, 2, 4);
 	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(255, 0, 0)); // blue font
-	OLEDrgb_PutString(oledrgbPtr, "*ODMK*");
+	switch(faderNum) {
+		case 0:
+			OLEDrgb_PutString(oledrgbPtr, "FADER 1");
+			break;
+
+		case 1:
+			OLEDrgb_PutString(oledrgbPtr, "FADER 2");
+			break;
+
+		case 2:
+			OLEDrgb_PutString(oledrgbPtr, "FADER 3");
+			break;
+
+		case 3:
+			OLEDrgb_PutString(oledrgbPtr, "FADER 3");
+			break;
+
+		default:
+			break;
+	}
 
 	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 200, 44));	//captain cobra grey
 	OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
@@ -1955,149 +1941,6 @@ void odmkFaderMuxScreen(void *oledrgbPtr, u8 faderSel)
 }
 
 
-void odmkFader1MuxScreen(void *oledrgbPtr, int fader1Sel)
-{
-	char ch;
-
-	/* output to screen */
-
-	for (ch = 0; ch < 5; ch++) {
-		OLEDrgb_DefUserChar(oledrgbPtr, ch, &rgbUserFont[ch*8]);
-	}
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 0, 255, 0));	// red
-	OLEDrgb_SetCursor(oledrgbPtr, 1, 1);
-	OLEDrgb_PutString(oledrgbPtr, "::((o))::");
-	OLEDrgb_SetCursor(oledrgbPtr, 2, 4);
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(255, 0, 0)); // blue font
-	OLEDrgb_PutString(oledrgbPtr, "*ODMK*");
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 200, 44));	//captain cobra grey
-	OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12, 44));
-	OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-	switch(fader1Sel) {
-		case 0:
-			printf("FaderMux screen: <<PWM FREQ>> MuxSel = %d\n\r", fader1Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<PWM FREQ>>");
-			break;
-
-		case 1:
-			printf("FaderMux screen: <<SSB FREQ>> MuxSel = %d\n\r", fader1Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<SSB FREQ>>");
-			break;
-
-		case 2:
-			printf("FaderMux screen: <<FLT CUT>> MuxSel = %d\n\r", fader1Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<FLT CUT>>");
-			break;
-
-		case 3:
-			printf("FaderMux screen: <<FLT RES>> MuxSel = %d\n\r", fader1Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<FLT RES>>");
-			break;
-
-		case 4:
-			printf("FaderMux screen: <<WS GAIN>> MuxSel = %d\n\r", fader1Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<WS GAIN>>");
-			break;
-
-	}
-}
-
-
-void odmkFader2MuxScreen(void *oledrgbPtr, int fader2Sel)
-{
-	char ch;
-
-	/* output to screen */
-
-	for (ch = 0; ch < 5; ch++) {
-		OLEDrgb_DefUserChar(oledrgbPtr, ch, &rgbUserFont[ch*8]);
-	}
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(0, 255, 0));	// red
-	OLEDrgb_SetCursor(oledrgbPtr, 1, 1);
-	OLEDrgb_PutString(oledrgbPtr, "::((o))::");
-	OLEDrgb_SetCursor(oledrgbPtr, 1, 4);
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(255, 0, 0)); // blue font
-	OLEDrgb_PutString(oledrgbPtr, "*ODMK*");
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 200, 44));	//captain cobra grey
-	OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12, 44));
-	OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-	switch(fader2Sel) {
-		case 0:
-			printf("Fader2Mux screen: <<DDL MIX>> MuxSel = %d\n\r", fader2Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<DDL MIX>>");
-			break;
-
-		case 1:
-			printf("Fader2Mux screen: <<DDL LEN>> MuxSel = %d\n\r", fader2Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<DDL LEN>>");
-			break;
-
-		case 2:
-			printf("Fader2Mux screen: <<DDL FB G>> MuxSel = %d\n\r", fader2Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<DDL FB G>>");
-			break;
-
-	}
-}
-
-
-void odmkFader3MuxScreen(void *oledrgbPtr, int fader3Sel)
-{
-	char ch;
-
-	/* output to screen */
-
-	for (ch = 0; ch < 5; ch++) {
-		OLEDrgb_DefUserChar(oledrgbPtr, ch, &rgbUserFont[ch*8]);
-	}
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(0, 255, 0));	// red
-	OLEDrgb_SetCursor(oledrgbPtr, 1, 1);
-	OLEDrgb_PutString(oledrgbPtr, "::((o))::");
-	OLEDrgb_SetCursor(oledrgbPtr, 2, 4);
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(255, 0, 0)); // blue font
-	OLEDrgb_PutString(oledrgbPtr, "*ODMK*");
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 200, 44));	//captain cobra grey
-	OLEDrgb_SetCursor(oledrgbPtr, 1, 6);
-
-	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB(200, 12, 44));
-	OLEDrgb_SetCursor(oledrgbPtr, 0, 7);
-	switch(fader3Sel) {
-		case 0:
-			printf("FaderMux screen: <<MSTR VOL>> MuxSel = %d\n\r", fader3Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<MSTR VOL>>");
-			break;
-
-		case 1:
-			printf("FaderMux screen: <<OSC1 FRQ>> MuxSel = %d\n\r", fader3Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<OSC FREQ>>");
-			break;
-
-		case 2:
-			printf("FaderMux screen: <<LFO1 FREQ>> MuxSel = %d\n\r", fader3Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<LFO FREQ>>");
-			break;
-
-		default:
-			printf("FaderMux screen: <<MSTR VOL>> MuxSel = %d\n\r", fader3Sel);
-			OLEDrgb_PutString(oledrgbPtr, "<<MSTR VOL>>");
-			break;
-
-	}
-}
-
-
-
-
 void faderScrnPrint(void *oledrgbPtr, char *faderSelStr, float faderVal) {
 
 	char faderValStr[12];
@@ -2120,6 +1963,10 @@ void faderScrnPrint(void *oledrgbPtr, char *faderSelStr, float faderVal) {
 
 void faderVal2Screen(void *oledrgbPtr, u8 faderSel, float faderVal, u8 faderNum)
 {
+
+	//temp
+	printf("faderVal2Screen: faderSel = %d,  faderNum = %d\n\r", (int)faderSel, (int)faderNum);
+
 	char ch;
 
 	char faderNumStr[2];
@@ -2228,69 +2075,8 @@ void faderVal2Screen(void *oledrgbPtr, u8 faderSel, float faderVal, u8 faderNum)
 }
 
 
-//void odmkFader1_val2Screen(void *oledrgbPtr, u8 fader1Sel, float fader1Val)
-//{
-//	char ch;
-//
-//	//char fader2ValStr[12];
-//	//ftoa(fader2ValStr, fader2Val, 1);
-//
-//	/* output to screen */
-//	char FADER1_0ScrnStr[12] = "<PWM FREQ>";
-//	char FADER1_1ScrnStr[12] = "<SSB FREQ>";
-//	char FADER1_2ScrnStr[12] = "<FLT CUT>";
-//	char FADER1_3ScrnStr[12] = "<FLT RES>";
-//	char FADER1_4ScrnStr[12] = "<WS GAIN>";
-//
-//
-//	for (ch = 0; ch < 5; ch++) {
-//		OLEDrgb_DefUserChar(oledrgbPtr, ch, &rgbUserFont[ch*8]);
-//	}
-//
-//	OLEDrgb_SetFontColor(oledrgbPtr, OLEDrgb_BuildRGB( 0, 255, 0));	// red
-//	OLEDrgb_SetCursor(oledrgbPtr, 1, 1);
-//	OLEDrgb_PutString(oledrgbPtr, "FADER 1");
-//
-//
-//	switch(fader1Sel) {
-//		case 0:
-//			//printf("Fader1Mux screen: <<PWM FREQ>> MuxSel = %d\n\r", fader1Sel);
-//			faderScrnPrint(oledrgbPtr, FADER1_0ScrnStr, fader1Val);
-//			break;
-//
-//		case 1:
-//			//printf("Fader1Mux screen: <<SSB FREQ>> MuxSel = %d\n\r", fader1Sel);
-//			faderScrnPrint(oledrgbPtr, FADER1_1ScrnStr, fader1Val);
-//			break;
-//
-//		case 2:
-//			//printf("Fader1Mux screen: <<FLT CUT>> MuxSel = %d\n\r", fader1Sel);
-//			faderScrnPrint(oledrgbPtr, FADER1_2ScrnStr, fader1Val);
-//			break;
-//
-//		case 3:
-//			//printf("Fader1Mux screen: <<FLT RES>> MuxSel = %d\n\r", fader1Sel);
-//			faderScrnPrint(oledrgbPtr, FADER1_3ScrnStr, fader1Val);
-//			break;
-//
-//		case 4:
-//			//printf("Fader1Mux screen: <<WS GAIN>> MuxSel = %d\n\r", fader1Sel);
-//			faderScrnPrint(oledrgbPtr, FADER1_4ScrnStr, fader1Val);
-//			break;
-//
-//		default:
-//			//printf("Fader1Mux screen: <<PWM FREQ>> MuxSel = %d\n\r", fader1Sel);
-//			faderScrnPrint(oledrgbPtr, FADER1_0ScrnStr, fader1Val);
-//			break;
-//
-//	}
-//}
-
-
-
 /*------------------------------------------------------------------------------------------------*/
-
-
+/*------------------------------------------------------------------------------------------------*/
 
 //----------------------------------------------------
 // INITIAL SETUP FUNCTIONS
@@ -2486,6 +2272,9 @@ int main(void)
     status = XGpio_Initialize(&AUDIOMUXInst, GPIO_AUDIOMUX_ID);
     if(status != XST_SUCCESS) return XST_FAILURE;
 
+
+    // Rotary Encoder Interpretations
+
     // __Rotary Encoder 1__
     // Initialize Rotary Encoder 1 Gpio
     status = XGpio_Initialize(&ROTARY1Inst, GPIO_ROTARY1_ID);
@@ -2549,9 +2338,15 @@ int main(void)
 	BPM = 136.0;	// Default BPM
 	uSECPERBEAT = (unsigned long)(1000000*60/BPM);
 
-	printf("BPM = %f\n", BPM);
+	printf("BPM = %3.2f\n", BPM);
 	//printf("uSec per beat = %d\n\r", uSECPERBEAT);
 	odmkInfoScreen(&oledrgb, BPM);
+
+	// Default Fader Target settings (change!?!)
+	fader1MuxSel = 0;
+	fader2MuxSel = 1;
+	fader3MuxSel = 6;
+	fader4MuxSel = 8;
 
 	XGpio_DiscreteWrite(&VOLWSCTRLInst, 1, volCtrlVal);
 	XGpio_DiscreteWrite(&VOLWSCTRLInst, 2, wsGainVal);
@@ -2590,8 +2385,8 @@ int main(void)
 	XGpio_DiscreteWrite(&MHLCTRL2Inst, 1, mooghlParam.beta2);
 	XGpio_DiscreteWrite(&MHLCTRL2Inst, 2, mooghlParam.beta3);
 
-	printf("MOOG Half Ladder Initial Parameters:\n");
-	printf("moog-hl Cutoff = %6.2f,   moog-hl Resonance = %2.2f\n", mooghlCutoff, mooghlRes);
+	//printf("MOOG Half Ladder Initial Parameters:\n");
+	//printf("moog-hl Cutoff = %6.2f,   moog-hl Resonance = %2.2f\n", mooghlCutoff, mooghlRes);
 	//printf("alpha = %i,  K = %i\n", mooghlParam.alpha, mooghlParam.K);
 	//printf("alpha0 = %i,  beta1 = %i\n", mooghlParam.alpha0, mooghlParam.beta1);
 	//printf("beta2 = %i,  beta3 = %i\n", mooghlParam.beta2, mooghlParam.beta3);
@@ -2604,8 +2399,8 @@ int main(void)
 	XGpio_DiscreteWrite(&SEMCTRL1Inst, 2, semlParam.alpha);
 	XGpio_DiscreteWrite(&SEMCTRL2Inst, 1, semlParam.rho);
 
-	printf("SEM State Variable Filter Initial Parameters:\n");
-	printf("sem-svf Cutoff = %6.2f,   sem-svf Q = %2.2f\n", semCutoff, semQ);
+	//printf("SEM State Variable Filter Initial Parameters:\n");
+	//printf("sem-svf Cutoff = %6.2f,   sem-svf Q = %2.2f\n", semCutoff, semQ);
 
 	/*------------------------------------------------------------------------------------------------*/
 
@@ -2619,7 +2414,7 @@ int main(void)
 
 			if (trigOnce == 1) {
 
-				btnDirection = !btnDirection;
+				//btnDirection = !btnDirection;
 
 				// format OSC freq value for printing
 				oscFreq1 = 100000000.0 * (float)oscFreq1StepVal / pow(2, hirezPhaseAccWidth);
@@ -2630,18 +2425,20 @@ int main(void)
 				//printf("sysmode = %d:\n",sysmode);
 				//printf("Zedboard Button Function:\n");
 				//printf("Center: Top State <sysmode == 0>\n");
-				//printf("Bottom: Go (seq) State <sysmode == 1>\n");
-				//printf("Left: Switch Update <sysmode == 2>\n");
-				//printf("Right: Audio Source Select <sysmode == 3>\n");
-				//printf("Top: Fader Select <sysmode == 4>\n");
+				//printf("Bottom: Empty Function\n");
+				//printf("Left: Empty Function\n");
+				//printf("Right: Empty Function\n");
+				//printf("Top: Empty Function\n");
 
 				printf("// *-------------------------------------------------* //\n");
 				printf("BPM = %3.2f\n", BPM);
-				//printf("BTN Direction {0:fwd, 1:rev} = %d\n", (int)btnDirection);
 				printf("volCtrlDB = %5.2f,   volCtrlVal = %d\n", volCtrlDB, (int)volCtrlVal);
 				printf("OSC Freq1 = %5.2f,   OSC Freq1 (LFO) = %5.2f\n", oscFreq1, oscFreq2);
 				printf("oscFreq1StepVal = %d,   oscFreq2StepVal = %d\n", oscFreq1StepVal, oscFreq2StepVal);
+				printf("MOOG Half Ladder Filter Parameters:\n");
 				printf("moog-hl Cutoff = %6.2f,   moog-hl Resonance = %2.2f\n", mooghlCutoff, mooghlRes);
+				printf("SEM State Variable Filter Parameters:\n");
+				printf("sem-svf Cutoff = %6.2f,   sem-svf Q = %2.2f\n", semCutoff, semQ);
 				printf("wetMixFloat = %2.2f,   wetMix = %d\n", wetMixFloat, (int)DDL4CTRL1Union.DDL4CTRL1.wetMix);
 				printf("delayLength = %d\n", (int)DDL4CTRL2Union.DDL4CTRL2.delayLength);
 				printf("feedbackGainFloat = %3.2f,   feedbackGain = %d\n", feedbackGainFloat, (int)DDL4CTRL1Union.DDL4CTRL1.feedbackGain);
@@ -2671,14 +2468,7 @@ int main(void)
 				printf("audioSelect - flt4Mux = %d\n", auMuxUnion.audioSelect.flt4Mux);
 				printf("audioSelect - audioSrcMux = %d\n", auMuxUnion.audioSelect.audioSrcMux);
 
-				printf("audioMuxSel = %d\n", (int)auMuxUnion.audioMuxSel);
-				//printf("audioSrcMuxSel = %d\n", (int)auSrcMuxUnion.audioSrcMuxSel);
-
-				//printf("Audio Mux Select = %d\n", (int)((auSrcMuxUnion.audioSrcMuxSel<<14) + (16383&auMuxUnion.audioMuxSel)) );
-				//u32 audioMuxSelect = (auSrcMuxUnion.audioSrcMuxSel<<14) + (16383&auMuxUnion.audioMuxSel);
-				//printf("Audio Mux Select = %d\n", (int)audioMuxSelect );
-				//u32 audioMuxSelect = auConcatUnion(auSrcMuxUnion.audioSrcMuxSel, auMuxUnion.audioMuxSel, audioMuxLsb);
-				//printf("audioMuxSelect = %d\n", (int)audioMuxSelect );
+				//printf("audioMuxSel = %d\n", (int)auMuxUnion.audioMuxSel);
 
 				OLEDrgb_Clear(&oledrgb);
 				odmkInfoScreen(&oledrgb, BPM);
@@ -2723,17 +2513,16 @@ int main(void)
 				odmkAudioMuxScreen(&oledrgb, auMuxUnion.audioSelect.audioSrcMux);
 			}
 			trigOnce = 0;
-			//sysmode=1;
 			// wait for button interrupt to change state
 		}
 
 		else if (sysmode == 2) {
 			/* increment fader 1 mux select - top button */
 			if (trigOnce==1) {
-				printf("sysmode = %d:   Fader 1 Mux Select = %d\n",sysmode, (int)fader1MuxSel);
+				printf("sysmode = %d:   Fader 1 Mux Select = %d\n", sysmode, (int)fader1MuxSel);
 				/* Update OLED display */
 				OLEDrgb_Clear(&oledrgb);
-				odmkFaderMuxScreen(&oledrgb, fader1MuxSel);
+				odmkFaderMuxScreen(&oledrgb, fader1MuxSel, (u8)0);
 				//odmkFader1MuxScreen(&oledrgb, fader1MuxSel);
 //				if (fader1MuxSel == 5 || fader1MuxSel == 6) {
 //					printf("MOOG Half Ladder Parameters:\n");
@@ -2741,21 +2530,18 @@ int main(void)
 //				}
 			}
 			trigOnce = 0;
-			//sysmode=1;
 			// wait for button interrupt to change state
 		}
-
 
 		else if (sysmode == 3) {
 			/* increment fader 2 mux select - bottom button */
 			if (trigOnce == 1) {
 				//printf("sysmode {%d}:   Fader 1 Mux Select = %d\n",sysmode, (int)fader2MuxSel);
 				OLEDrgb_Clear(&oledrgb);
-				odmkFaderMuxScreen(&oledrgb, fader2MuxSel);
+				odmkFaderMuxScreen(&oledrgb, fader2MuxSel, (u8)1);
 				//odmkFader2MuxScreen(&oledrgb, fader2MuxSel);
 			}
 			trigOnce = 0;
-
 			// wait for button interrupt to change state
 		}
 
@@ -2764,11 +2550,10 @@ int main(void)
 			if (trigOnce == 1) {
 				//printf("sysmode {%d}:   Fader 3 Mux Select = %d\n",sysmode, (int)fader2MuxSel);
 				OLEDrgb_Clear(&oledrgb);
-				odmkFaderMuxScreen(&oledrgb, fader3MuxSel);
+				odmkFaderMuxScreen(&oledrgb, fader3MuxSel, (u8)2);
 				//odmkFader3MuxScreen(&oledrgb, fader3MuxSel);
 			}
 			trigOnce = 0;
-
 			// wait for button interrupt to change state
 		}
 
@@ -2777,65 +2562,60 @@ int main(void)
 			if (trigOnce == 1) {
 				//printf("sysmode {%d}:   Fader 3 Mux Select = %d\n",sysmode, (int)fader2MuxSel);
 				OLEDrgb_Clear(&oledrgb);
-				odmkFaderMuxScreen(&oledrgb, fader4MuxSel);
+				odmkFaderMuxScreen(&oledrgb, fader4MuxSel, (u8)3);
 			}
 			trigOnce = 0;
-
 			// wait for button interrupt to change state
 		}
 
 		else if (sysmode == 6) {
 			/* update OLED - fader 1 Val */
 			if (trigOnce==1) {
-				printf("sysmode = %d:   Fader 1 Select = %d\n", sysmode, (int)fader1MuxSel);
+				printf("sysmode = %d:   Fader 1 Select = %d\n", sysmode, (int)fader1Lvl);
 				/* Update OLED display */
 				OLEDrgb_Clear(&oledrgb);
 				//odmkFader1_val2Screen(&oledrgb, fader1MuxSel, fader1Lvl);
 				faderVal2Screen(&oledrgb, fader1MuxSel, fader1Lvl, (u8)1);
 			}
 			trigOnce = 0;
-			//sysmode=1;
 			// wait for button interrupt to change state
 		}
 
 		else if (sysmode == 7) {
 			/* update OLED - fader 2 Val */
 			if (trigOnce==1) {
-				//printf("sysmode = %d:   Fader 2 Val = %d\n", sysmode, (int)fader2MuxSel);
+				printf("sysmode = %d:   Fader 2 Val = %d\n", sysmode, (int)fader2Lvl);
 				/* Update OLED display */
 				OLEDrgb_Clear(&oledrgb);
 				//odmkFader2_val2Screen(&oledrgb, fader2MuxSel, fader2Lvl);
 				faderVal2Screen(&oledrgb, fader2MuxSel, fader2Lvl, (u8)2);
 			}
 			trigOnce = 0;
-			//sysmode=1;
 			// wait for button interrupt to change state
 		}
 
 		else if (sysmode == 8) {
 			/* update OLED - fader 3 Val */
 			if (trigOnce==1) {
-				//printf("sysmode = %d:   Fader 3 Val = %d\n", sysmode, (int)fader3MuxSel);
+				printf("sysmode = %d:   Fader 3 Val = %d\n", sysmode, (int)fader3Lvl);
 				/* Update OLED display */
 				OLEDrgb_Clear(&oledrgb);
 				//odmkFader3_val2Screen(&oledrgb, fader3MuxSel, fader3Lvl);
 				faderVal2Screen(&oledrgb, fader3MuxSel, fader3Lvl, (u8)3);
 			}
 			trigOnce = 0;
-			//sysmode=1;
 			// wait for button interrupt to change state
 		}
 
 		else if (sysmode == 9) {
 			/* update OLED - fader 4 Val */
 			if (trigOnce==1) {
-				//printf("sysmode = %d:   Fader 3 Val = %d\n", sysmode, (int)fader3MuxSel);
+				printf("sysmode = %d:   Fader 4 Val = %d\n", sysmode, (int)fader4Lvl);
 				/* Update OLED display */
 				OLEDrgb_Clear(&oledrgb);
 				faderVal2Screen(&oledrgb, fader4MuxSel, fader4Lvl, (u8)4);
 			}
 			trigOnce = 0;
-			//sysmode=1;
 			// wait for button interrupt to change state
 		}
 
